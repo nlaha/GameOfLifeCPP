@@ -1,7 +1,10 @@
-# GameOfLifeCPP
-Simple Game Of Life written in C++
-
+# 🦠 GameOfLifeCPP
+Super fast Game Of Life written in C++
 One of my first complete programs in C++, I'm working on adding more features.
+
+<div align="center">
+    <img src="/screenshots/s3.png" width="400px"</img> 
+</div>
 
 ## Usage:
 
@@ -19,3 +22,11 @@ Scroll to change brush size and click to draw
 Shift+Scroll to add delay to the simulation (slow it down)
 
 Click on `Clear/Fill/RColor` to Clear, Fill with noise and set random colors
+
+<div align="center">
+    <img src="/screenshots/s2.png" width="400px"</img> 
+</div>
+
+<div align="center">
+    <img src="/screenshots/s1.png" width="400px"</img> 
+</div>
