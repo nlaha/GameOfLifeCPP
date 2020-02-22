@@ -1,0 +1,8 @@
+# sets the size of the simulation
+boardsize=1000
+# scales the simulation (1 means 1 pixel per cell)
+pixelsize=1
+# this scales the noise used to generate the initial board and when pressing "fill"
+noise_frequency=10
+# reads from a text file named "Board.txt" with "#" being alive and "." being dead
+use_file=false

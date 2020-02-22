@@ -2,51 +2,29 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include <algorithm>    // std::for_each
 #include <string>
 
 class Board
 {
     private:
-        /**
-        * Checks the cell surroundings for live cells and returns the number
-        *
-        * @param board is a 2D vector of characters with the input generation
-        * @param row the row to check
-        * @param col the column to check
-        */
-        int checkNeighbors(std::vector<std::vector<char>> board, int row, int col) {
-            // start checking for neighbors
-            int numNeighbors = 0;
-            for (int i = -1; i <= 1; i++)
-            {
-                for (int j = -1; j <= 1; j++)
-                {
-                    // Check to make sure we're not out of bounds
-                    if ((row + i) < BOARDSIZE_X && (col + j) < BOARDSIZE_Y) {
-                        if ((row + i) > 0 && (col + j) > 0) {
-                            // Check to make sure we're not on the cell itself
-                            if (!(i == 0 && j == 0)) {
-                                // Check to make sure the neighbor is alive
-                                if (board[row + i][col + j] == '#') {
-                                    numNeighbors++; // Add a neighbor
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            return numNeighbors;
-        }
 
-        uint8_t BOARDSIZE_Y = 20;
-        uint8_t BOARDSIZE_X = 20;
-        uint16_t generation = 0;
+        uint16_t BOARDSIZE_Y = 20;
+        uint16_t BOARDSIZE_X = 20;
         std::vector<std::vector<char>> board; // vector that stores the board
+        std::vector<std::vector<int>> boardAge; // vector that stores the age of each cell
 
     public:
 
+        uint16_t generation = 0; // making this public cause a getgeneration() function would be slow
+
         /* CONSTRUCTOR */
-        Board(uint8_t BOARDSIZE_X, uint8_t BOARDSIZE_Y) {
+        Board(uint16_t newBOARDSIZE_X, uint16_t newBOARDSIZE_Y) {
+            BOARDSIZE_X = newBOARDSIZE_X;
+            BOARDSIZE_Y = newBOARDSIZE_Y;
+
+            boardAge.resize(BOARDSIZE_Y, std::vector<int>(BOARDSIZE_X));
+
             board.resize(BOARDSIZE_Y, std::vector<char>(BOARDSIZE_X));
         }
 
@@ -56,37 +34,69 @@ class Board
         * @param board is a 2D vector of characters with the input generation
         */
         void nextGeneration() {
+
+            generation++; // increment the generation
             std::vector<std::vector<char>> boardTemp(BOARDSIZE_Y, std::vector<char>(BOARDSIZE_X));
 
-            for (int row = 0; row < BOARDSIZE_Y; row++) // loop through rows
+            tbb::parallel_for(tbb::blocked_range<uint16_t>(0, BOARDSIZE_Y), [&](tbb::blocked_range<uint16_t> ib)
             {
-                for (int col = 0; col < BOARDSIZE_X; col++) // loop through columns
+                tbb::parallel_for(tbb::blocked_range<uint16_t>(0, BOARDSIZE_X), [&](tbb::blocked_range<uint16_t> jb)
                 {
-                    int numNeighbors = 0;
-                    //std::future<int> fNeighbors = std::async(std::launch::async, &checkNeighbors, board, row, col, BOARDSIZE_X, BOARDSIZE_Y);
-                    //numNeighbors = fNeighbors.get();
-                    numNeighbors = checkNeighbors(board, row, col);
+                    // These loops are divided up across all threads
+                    for (int row = ib.begin(); row < ib.end(); ++row)
+                    {
+                        for (int col = jb.begin(); col < jb.end(); ++col)
+                        {
+                            int numNeighbors = 0;
 
-                    /*  GOL RULES BELOW  */
+                            // Check for new neighbors
+                            for (int i = -1; i <= 1; i++)
+                            {
+                                for (int j = -1; j <= 1; j++)
+                                {
+                                    // Check to make sure we're not out of bounds
+                                    if ((row + i) < BOARDSIZE_X && (col + j) < BOARDSIZE_Y) {
+                                        if ((row + i) > 0 && (col + j) > 0) {
+                                            // Check to make sure we're not on the cell itself
+                                            if (!(i == 0 && j == 0)) {
+                                                // Check to make sure the neighbor is alive
+                                                if (getCell(row + i, col + j) == '#') {
+                                                    numNeighbors++; // Add a neighbor
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
 
-                    // Cell dies (1 or 0 neighbors)
-                    if (numNeighbors < 2) {
-                        boardTemp[row][col] = '.';
+                            /*  GOL RULES BELOW  */
+
+                            // Cell dies (1 or 0 neighbors)
+                            if (numNeighbors < 2) {
+                                boardTemp[row][col] = '.';
+                                setCellAge(row, col, 0);
+                            }
+                            // Cell dies (> 3 neighbors)
+                            else if (numNeighbors > 3) {
+                                boardTemp[row][col] = '.';
+                                setCellAge(row, col, 0);
+                            }
+                            // Call grows (exactly 3 neighbors)
+                            else if (numNeighbors == 3 && getCell(row, col) == '.') {
+                                boardTemp[row][col] = '#';
+                                setCellAge(row, col, 0);
+                            }
+                            // if it's not one of these things then just up the age counter
+                            else {
+                                boardTemp[row][col] = getCell(row, col);
+                                int upAge = getCellAge(row, col);
+                                upAge++;
+                                setCellAge(row, col, upAge);
+                            }
+                        }
                     }
-                    // Cell dies (> 3 neighbors)
-                    else if (numNeighbors > 3) {
-                        boardTemp[row][col] = '.';
-                    }
-                    // Call grows (exactly 3 neighbors)
-                    else if (numNeighbors == 3) {
-                        boardTemp[row][col] = '#';
-                    }
-                    // if it's not one of these things then just do nothing
-                    else {
-                        boardTemp[row][col] = board[row][col];
-                    }
-                }
-            }
+                });
+            });
 
             board = boardTemp;
         }
@@ -120,10 +130,7 @@ class Board
         // Prints the board to the console
         void show() {
 
-            // Get Start Time
-            std::chrono::system_clock::time_point start = std::chrono::system_clock::now();
-
-            std::cout << "Generation: " + std::to_string(generation) << std::endl;
+            std::cout << "Generation: " + std::to_string(generation) << '\n';
 
             for (int i = 0; i < BOARDSIZE_Y; i++)
             {
@@ -131,17 +138,51 @@ class Board
                 {
                     std::cout << board[i][j] << ' ';
                 }
-                std::cout << std::endl;
+                std::cout << '\n';
             }
             std::cout << '\n';
 
-            // Get End Time
-            auto end = std::chrono::system_clock::now();
+        }
 
-            auto diff = std::chrono::duration_cast <std::chrono::milliseconds> (end - start).count();
-            std::cout << "Time to compute = " << diff << " Milliseconds" << std::endl;
+        std::vector<std::vector<char>> getBoard() {
+            return board;
+        }
 
-            generation++;
+        std::vector<std::vector<int>> getBoardAge() {
+            return boardAge;
+        }
+
+        int getCellAge(int row, int col) {
+            return boardAge[row][col];
+        }
+
+        char getCell(int row, int col) {
+            return board[row][col];
+        }
+
+        void setBoard(std::vector<std::vector<char>> newBoard) {
+            board = newBoard;
+        }
+
+        void setCell(int row, int col, char state) {
+            if (row < BOARDSIZE_X && col < BOARDSIZE_Y) {
+                if (row > 0 && col > 0) {
+                    board[row][col] = state;
+                }
+            }
+        }
+
+        void setCellAge(int row, int col, int age) {
+            if (row < BOARDSIZE_X && col < BOARDSIZE_Y) {
+                if (row > 0 && col > 0) {
+                    boardAge[row][col] = age;
+                }
+            }
+        }
+
+        void clearBoard() {
+            std::vector<std::vector<char>> empty(BOARDSIZE_Y, std::vector<char>(BOARDSIZE_X));
+            board = empty;
         }
 };
 
