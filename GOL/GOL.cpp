@@ -27,8 +27,8 @@
 // License: MIT
 // 
 // Requires Intel TBB
-// Should run on any platform but 
-//
+// Should run on any platform but won't
+// work with enscripten for webassembly
 //
 
 sf::View getLetterboxView(sf::View view, int windowWidth, int windowHeight) {
@@ -83,7 +83,7 @@ int main()
 
     bool USE_FILE = false;
 
-        // Read config file
+    // Read config file
     std::ifstream cFile("config.txt");
     if (cFile.is_open())
     {
@@ -110,7 +110,7 @@ int main()
                 if (value == "true") {
                     USE_FILE = true;
                 } else {
-                    USE_FILE = false;
+                    USE_FILE = false; 
                 }
             }
         }
@@ -151,16 +151,18 @@ int main()
     settings.antialiasingLevel = 0;
     sf::RenderWindow window(sf::VideoMode(PIXELSIZE * BOARDSIZE_X, PIXELSIZE * BOARDSIZE_Y + 50), "Game of Life", sf::Style::Default, settings);
 
+    // Make an SFML view
     sf::View view;
     view.setSize(PIXELSIZE * BOARDSIZE_X, PIXELSIZE * BOARDSIZE_Y + 50);
     view.setCenter(view.getSize().x / 2, view.getSize().y / 2);
     view = getLetterboxView(view, PIXELSIZE * BOARDSIZE_X, PIXELSIZE * BOARDSIZE_Y);
 
+    // Load font for below UI elements
     sf::Font font;
     if (!font.loadFromFile("font.ttf"))
     {
         // error...
-        std::cout << "Error loading font \"font.ttf\" please make sure it's next to the executable";
+        std::cerr << "Error loading font \"font.ttf\" please make sure it's next to the executable";
         window.close();
     }
 
@@ -217,16 +219,19 @@ int main()
     simdText.setCharacterSize(15);
     simdText.setPosition(300.0f, (BOARDSIZE_Y * PIXELSIZE) + 28.0f);
 
+    // New color preview
     sf::RectangleShape newcolPreview;
     newcolPreview.setSize(sf::Vector2f(40, 20));
     newcolPreview.setPosition(0, (BOARDSIZE_Y * PIXELSIZE));
     newcolPreview.setFillColor(NEW_COLOR);
 
+    // Old color preview
     sf::RectangleShape oldcolPreview;
     oldcolPreview.setSize(sf::Vector2f(40, 20));
     oldcolPreview.setPosition(0, (BOARDSIZE_Y * PIXELSIZE) + 20.0f);
     oldcolPreview.setFillColor(OLD_COLOR);
     
+    // Local vars before the main loop
     int bsize = BRUSH_SIZE;
     sf::Color oldC = OLD_COLOR;
     sf::Color newC = NEW_COLOR;
@@ -250,7 +255,7 @@ int main()
     if (!buffer.create(BOARDSIZE_X * PIXELSIZE, BOARDSIZE_Y * PIXELSIZE))
     {
         // error...
-        std::cout << "Error creating buffer texture";
+        std::cerr << "Error creating buffer texture";
         window.close();
     }
 
@@ -265,42 +270,49 @@ int main()
         sf::Event event;
         while (window.pollEvent(event))
         {
+            // Close window if closed
             if (event.type == sf::Event::Closed)
                 window.close();
+            // Check if mouse wheel has moved
             else if (event.type == sf::Event::MouseWheelMoved)
             {
+                // Check if shift key is pressed
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift))
                 {
+                    // Make sure we don't have negative sim delay
                     if (simulationDelay >= 0 && (simulationDelay + event.mouseWheel.delta) >= 0) {
+
                         // set sim delay
                         simulationDelay += event.mouseWheel.delta;
                     }
                     simdText.setString("Simulation Delay: " + std::to_string(simulationDelay));
                 }
                 else {
-                    // Change brush size
+                    // Change brush size and make sure we don't have negative brush size
                     if (bsize > 0 && (bsize + event.mouseWheel.delta) >= 1) {
                         bsize += event.mouseWheel.delta;
                     }
                     bsizeText.setString("BSize: " + std::to_string(bsize));
                 }
             }
+            // Add letterbox bars on resize
             if (event.type == sf::Event::Resized) {
                 view = getLetterboxView(view, event.size.width, event.size.height);
                 windowWidth = event.size.width;
                 windowHeight = event.size.height;
             }
-        }
 
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space))
-        {
-            if (keyup == true) {
-                keyup = false;
-                simRunning = !simRunning;
+            // Play and pause simulation
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space))
+            {
+                if (keyup == true) {
+                    keyup = false;
+                    simRunning = !simRunning;
+                }
             }
-        }
-        else {
-            keyup = true;
+            else {
+                keyup = true;
+            }
         }
 
         window.clear();
