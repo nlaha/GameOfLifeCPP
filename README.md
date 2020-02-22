@@ -25,8 +25,5 @@ Click on `Clear/Fill/RColor` to Clear, Fill with noise and set random colors
 
 <div align="center">
     <img src="/screenshots/s2.png" width="400px"</img> 
-</div>
-
-<div align="center">
     <img src="/screenshots/s1.png" width="400px"</img> 
 </div>
