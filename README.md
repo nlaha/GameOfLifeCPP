@@ -1,5 +1,5 @@
 # 🦠 GameOfLifeCPP
-NOTE: to anyone looking at this, I'm realizing now I put everything in a header file. I knnow this isn't how C++ is supposed to be structured but at the time I made this I had almost no knowledge of how C++ works.
+NOTE: to anyone looking at this, I'm realizing now I put everything in a header file. I know this isn't how C++ is supposed to be structured but at the time I made this I had almost no knowledge of how C++ works.
 
 Super fast Game Of Life written in C++
 One of my first complete programs in C++, I'm working on adding more features.
